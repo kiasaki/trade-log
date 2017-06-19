@@ -1,9 +1,7 @@
 import os
-import sys
-import time
-import logging
 from hashlib import md5
 from datetime import datetime
+from collections import namedtuple
 from flask import Flask, request, session, url_for, redirect, \
     render_template, abort, g, flash, _app_ctx_stack
 from werkzeug import check_password_hash, generate_password_hash
@@ -17,7 +15,7 @@ from sqlalchemy import create_engine, select, MetaData, Table, Column, \
 
 DATABASE = 'sqlite:///tradelog.db'
 DEBUG = True if os.getenv('DEBUG', '0') == '1' else False
-SERVER_NAME = '127.0.0.1:' + os.getenv('PORT', '5000')
+SERVER_NAME = 'localhost:' + os.getenv('PORT', '5000')
 SECRET_KEY = os.getenv('SECRET_KEY', 'keyboard cat')
 
 app = Flask('trade_log')
@@ -54,11 +52,22 @@ accounts = Table(
 def initdb_command():
     """Creates the database tables."""
     metadata.create_all(engine, checkfirst=True)
-    app.log.info('initialized database')
+    app.logger.info('initialized database')
 
 
-# Template filters
+# Utils
 # ######################################
+
+def objectify(obj):
+    if isinstance(obj, dict):
+        for key, value in obj.iteritems():
+            obj[key] = objectify(value)
+        return namedtuple('GenericDict', obj.keys())(**obj)
+    elif isinstance(obj, list):
+        return [objectify(item) for item in obj]
+    else:
+        return obj
+
 
 def format_datetime(timestamp):
     """Format a timestamp for display."""
@@ -96,8 +105,8 @@ def close_database(exception):
         top.db.close()
 
 
-def db_exec(ins):
-    return get_db().execute(ins)
+def db_exec(ins, **kwargs):
+    return get_db().execute(ins, **kwargs)
 
 
 def db_get_where(table, where):
@@ -105,7 +114,7 @@ def db_get_where(table, where):
     result = db_exec(s)
     row = result.fetchone()
     result.close()
-    return row
+    return objectify(row)
 
 
 # Middlewares
@@ -114,17 +123,18 @@ def db_get_where(table, where):
 @app.before_request
 def before_request():
     g.user = None
+    app.logger.info(session)
     if 'user_id' in session:
-        g.user = db_get_where(users, users.c.id == session['user_id'])
+        g.user = db_get_where(users, users.c.user_id == session['user_id'])
 
-
-# Handlers
-# ######################################
 
 @app.errorhandler(404)
 def page_not_found(error):
     return 'This page does not exist', 404
 
+
+# Handlers
+# ######################################
 
 @app.route('/')
 def marketing():
@@ -140,19 +150,64 @@ def dashboard():
     return render_template('dashboard.html')
 
 
-@app.route('/signin')
+@app.route('/accounts')
+def accounts():
+    pass
+
+
+@app.route('/signin', methods=['GET', 'POST'])
 def sign_in():
-    pass
+    if g.user:
+        return redirect(url_for('dashboard'))
+    error = None
+    if request.method == 'POST':
+        user = db_get_where(users, users.c.email == request.form['email'].lower())
+        if user is None:
+            error = 'Invalid email and password combination'
+        elif not check_password_hash(user['password'], request.form['password']):
+            error = 'Invalid email and password combination'
+        else:
+            flash('You are now logged in')
+            session['user_id'] = user['user_id']
+            app.logger.info(session)
+            return redirect(url_for('dashboard'))
+    return render_template('sign_in.html', error=error)
 
 
-@app.route('/signup')
+@app.route('/signup', methods=['GET', 'POST'])
 def sign_up():
-    pass
+    if g.user:
+        return redirect(url_for('dashboard'))
+    error = None
+    if request.method == 'POST':
+        if not request.form['username']:
+            error = 'You have to enter a username'
+        elif not request.form['email'] or \
+                '@' not in request.form['email']:
+            error = 'You have to enter a valid email address'
+        elif db_get_where(users, users.c.email == request.form['email'].lower()) is not None:
+            error = 'The email is already taken'
+        elif not request.form['password']:
+            error = 'You have to enter a password'
+        elif request.form['password'] != request.form['password2']:
+            error = 'The two passwords do not match'
+        elif db_get_where(users, users.c.username == request.form['username']) is not None:
+            error = 'The username is already taken'
+        else:
+            ins = users.insert()
+            db_exec(
+                ins,
+                username=request.form['username'],
+                email=request.form['email'].lower(),
+                password=generate_password_hash(request.form['password']),
+            )
+            flash('You were successfully registered and can login now')
+            return redirect(url_for('sign_in'))
+    return render_template('sign_up.html', error=error)
 
 
 @app.route('/signout')
 def sign_out():
-    flash('You are now logged out')
     session.pop('user_id', None)
     return redirect(url_for('marketing'))
 
@@ -161,5 +216,4 @@ def sign_out():
 # ######################################
 
 if __name__ == '__main__':
-    app.logger.debug(app.url_map)
     app.run(debug=DEBUG)

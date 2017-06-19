@@ -28,6 +28,10 @@ html, body {
   .fn-ns { float: none; }
 }
 
+.tl { text-align: left; }
+.tc { text-align: center; }
+.tr { text-align: right; }
+
 a, a:visited {
   color: #A463F2;
 }
@@ -255,4 +259,15 @@ input[type='email']:focus {
 .home__features__screen img {
   border: 2px solid #CCCCCC;
   border-radius: 3px;
+}
+
+/* Auth */
+/*************************************/
+.auth-form {
+  margin: 5rem auto;
+  max-width: 20rem;
+}
+.auth-form input[type="text"],
+.auth-form input[type="password"] {
+  max-width: none;
 }

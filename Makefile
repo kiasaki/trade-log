@@ -1,5 +1,5 @@
 run:
-	bash -c 'sleep 1 && open http://127.0.0.1:5000' &
+	bash -c 'sleep 1 && open http://localhost:5000' &
 	DEBUG=1 python trade_log/trade_log.py
 
 manage:

@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block title %}Sign up{% endblock %}
+
+{% block body %}
+  <form action="" method="post" class="form auth-form">
+    <h1 class="page-title tc">{{ self.title() }}</h1>
+
+    {% if error %}
+      <div class="note note--danger"><strong>Error:</strong> {{ error }}</div>
+    {% endif %}
+
+    <div class="form__field">
+      <label>Username:</label>
+      <input type="text" name="username" value="{{ request.form.username }}" autofocus>
+    </div>
+    <div class="form__field">
+      <label>E-Mail:</label>
+      <input type="text" name="email" value="{{ request.form.email }}">
+    </div>
+    <div class="form__field">
+      <label>Password:</label>
+      <input type="password" name="password">
+    </div>
+    <div class="form__field">
+      <label>Password <small>(repeat)</small>:</label>
+      <input type="password" name="password2">
+    </div>
+    <div class="form__field">
+      <button type="submit" class="btn">Sign Up</button>
+    </div>
+  </form>
+{% endblock %}
