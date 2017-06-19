@@ -29,3 +29,7 @@ make
 # or
 FLASK_APP=trade_log/trade_log.py flask run
 ```
+
+## license
+
+MIT.

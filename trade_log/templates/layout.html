@@ -1,31 +1,27 @@
 <!doctype html>
 <title>{% block title %}home{% endblock %} | trade log</title>
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='app.css') }}">
-<div class="page">
-  <h1>trade log</h1>
-  <div class="navigation">
-  {% if g.user %}
-    <a href="{{ url_for('trades') }}">trades</a> |
-    <a href="{{ url_for('accounts') }}">accounts</a> |
-    <a href="{{ url_for('sign_out') }}">sign out [{{ g.user.username }}]</a>
-  {% else %}
-    <a href="{{ url_for('sign_up') }}">sign up</a> |
-    <a href="{{ url_for('sign_in') }}">sign in</a>
-  {% endif %}
+<div class="page-container">
+  <div class="page-header">
+    <h1><a href="{{ url_for('marketing') }}">trade log</a></h1>
+    <aside>
+      {% if g.user %}
+        <a href="{{ url_for('dashboard') }}">trades</a>
+        <a href="{{ url_for('accounts') }}">accounts</a>
+        <a href="{{ url_for('sign_out') }}">sign out [{{ g.user.username }}]</a>
+      {% else %}
+        <a href="{{ url_for('sign_up') }}">sign up</a>
+        <a href="{{ url_for('sign_in') }}">sign in</a>
+      {% endif %}
+    </aside>
   </div>
-  {% with flashes = get_flashed_messages() %}
-    {% if flashes %}
-      <ul class="flashes">
-      {% for message in flashes %}
-        <li>{{ message }}
-      {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-  <div class="body">
-  {% block body %}{% endblock %}
+  <div class="page-content">
+    {% for (category, message) in get_flashed_messages(with_categories=True) %}
+      <div class="note note--{{category}}">{{ message }}</div>
+    {% endfor %}
+    {% block body %}{% endblock %}
   </div>
-  <div class="footer">
+  <div class="page-footer">
     trade log
     &mdash; by <a href="https://github.com/kiasaki">kiasaki</a>
     &mdash; on <a href="https://github.com/kiasaki/trade-log">github</a>

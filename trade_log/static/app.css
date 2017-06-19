@@ -78,15 +78,15 @@ input[type='email']:focus {
 .btn:hover {
   opacity: 0.8;
 }
-.btn--large {
+.btn--large, a.btn--large {
   font-size: 1.2rem;
   padding: 0.75rem 1rem;
 }
-.btn--secondary {
+.btn--secondary, a.btn--secondary {
   background: #FFFFFF;
   color: #A463F2;
 }
-.btn--inverse {
+.btn--inverse, a.btn--inverse {
   background: #FFFFFF;
   border-color: #FFFFFF;
   color: #A463F2;
@@ -109,7 +109,8 @@ input[type='email']:focus {
   color: #3C763D;
   background: #DFF0D8;
 }
-.note--info {
+.note--info,
+.note--message {
   color: #31708F;
   background: #D9EDF7;
 }
@@ -197,6 +198,12 @@ input[type='email']:focus {
   font-size: 2rem;
   margin: 0;
   padding: 0 0 1rem;
+}
+
+.page-footer {
+  text-align: center;
+  border-top: 1px solid #CCCCCC;
+  padding: 1rem;
 }
 
 /* Home */
