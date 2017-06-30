@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block title %}Create a Trade{% endblock %}
+
+{% block body %}
+  <form action="" method="post" class="form">
+    <h1 class="page-title">{{ self.title() }}</h1>
+
+    <div class="form__field">
+      <label>Reason for Entry:</label>
+      <textarea name="entry_reason" value="{{ request.form.entry_reason }}" rows="4" autofocus></textarea>
+    </div>
+    <div class="form__field">
+      <button type="submit" class="btn">Create</button>
+    </div>
+  </form>
+{% endblock %}

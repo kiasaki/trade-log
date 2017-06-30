@@ -40,6 +40,7 @@ img {
   max-width: 100%;
 }
 
+textarea,
 input[type='text'],
 input[type='password'],
 input[type='email'] {
@@ -51,11 +52,18 @@ input[type='email'] {
   width: 100%;
   max-width: 16rem;
 }
+textarea,
 input[type='text']:focus,
 input[type='password']:focus,
 input[type='email']:focus {
   border-color: #A463F2;
   outline: 0;
+}
+textarea {
+  max-width: 24rem;
+}
+select {
+  cursor: pointer;
 }
 
 .form {
@@ -165,6 +173,18 @@ input[type='email']:focus {
 }
 .page-header aside span {
   color: #E8DDF4;
+}
+.page-header aside form {
+  display: inline-block;
+}
+.page-header aside select {
+  display: inline-block;
+  background: #FFFFFF;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 3px;
+  appearance: none;
+  -webkit-appearance: none;
 }
 .page-header aside a {
   display: inline-block;

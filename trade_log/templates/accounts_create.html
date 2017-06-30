@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block title %}Create an Account{% endblock %}
+
+{% block body %}
+  <form action="" method="post" class="form">
+    <h1 class="page-title">{{ self.title() }}</h1>
+
+    <div class="form__field">
+      <label>Name <i>(e.g. E-Trade Long Term Margin)</i>:</label>
+      <input type="text" name="name" value="{{ request.form.name }}" autofocus>
+    </div>
+    <div class="form__field">
+      <button type="submit" class="btn">Create</button>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ g.account.name }}{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">
+    {{ self.title() }}
+    <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}" class="btn fr">
+      + New Trade
+    </a>
+  </h1>
+
+  <h2>Overview</h2>
+
+  <div>
+    account value, risk %,
+    gain/loss past week, gain/loss % past week
+    gain/loss past month, gain/loss % past month
+    gain/loss YTD, gain/loss % YTD
+    gain/loss past year, gain/loss % past year
+  </div>
+
+  <h2>Trades</h2>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <td>ID</td>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in g.trades %}
+        <tr>
+          <td>
+            <a href="{{ url_for('trade', account_id=t.account_id, trade_id=t.trade_id) }}">
+              #{{ t.trade_id }}
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr />
+
+  <div>
+    order
+    <div>
+      symbol, instrument_type, type, quantity, date, price, price_filled<br />
+      date, order price, filled price, [slipage], shares, [cost]
+    </div>
+  </div>
+
+  <div>
+    trade
+    <div>
+      reason for entry, reason for exit, analysis, pictures,
+    </div>
+    <div>
+      first entry, last exit, shares, average entry, average exit, gain/loss %, gain/loss
+    </div>
+  </div>
+
+{% endblock %}

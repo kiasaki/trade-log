@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ g.account.name }}{% endblock %}
+
+{% block body %}
+  <h1 class="page-title">
+    {{ self.title() }} &mdash; Trade
+    <a href="{{ url_for('account', account_id=g.account.account_id) }}" class="btn fr">
+      &larr; Back
+    </a>
+  </h1>
+{% endblock %}
