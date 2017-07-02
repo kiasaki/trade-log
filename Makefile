@@ -5,6 +5,9 @@ run:
 manage:
 	FLASK_DEBUG=1 FLASK_APP=trade_log/trade_log.py flask $(filter-out $@,$(MAKECMDGOALS))
 
+deps:
+	pip install -r requirements.txt
+
 install:
 	pip install $(filter-out $@,$(MAKECMDGOALS))
 	pip freeze >requirements.txt

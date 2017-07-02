@@ -14,7 +14,11 @@ from sqlalchemy import create_engine, select, MetaData, Table, Column, \
 # Config
 # ######################################
 
-LOCAL_DATABASE_URL = 'postgres://trade_log:trade_log@localhost:5432/trade_log'
+# SQLite
+LOCAL_DATABASE_URL = 'sqlite:///trade_log.db'
+# Postgres
+# LOCAL_DATABASE_URL = 'postgres://trade_log:trade_log@localhost:5432/trade_log'
+
 DATABASE = os.getenv('DATABASE_URL', LOCAL_DATABASE_URL)
 DEBUG = True if os.getenv('DEBUG', '0') == '1' else False
 SERVER_NAME = 'localhost:' + os.getenv('PORT', '5000')
@@ -89,6 +93,8 @@ def resetdb_command():
 # ######################################
 
 def objectify(row):
+    if row is None:
+        return None
     obj = {}
     for (key, value) in row.items():
         obj[key] = value
@@ -289,11 +295,11 @@ def sign_in():
         user = db_get_where(userst, users.c.email == request.form['email'].lower())
         if user is None:
             error = 'Invalid email and password combination'
-        elif not check_password_hash(user['password'], request.form['password']):
+        elif not check_password_hash(user.password, request.form['password']):
             error = 'Invalid email and password combination'
         else:
             flash('You are now logged in')
-            session['user_id'] = user['user_id']
+            session['user_id'] = user.user_id
             return redirect(url_for('accounts'))
     return render_template('sign_in.html', error=error)
 
