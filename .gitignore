@@ -1,4 +1,5 @@
 dist
 *.pyc
+*.tmp
 .DS_ignore
 trade_log.db

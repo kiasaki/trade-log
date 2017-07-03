@@ -3,15 +3,129 @@
 {% block title %}Create a Trade{% endblock %}
 
 {% block body %}
-  <form action="" method="post" class="form">
-    <h1 class="page-title">{{ self.title() }}</h1>
+  <div class="cf">
+    <form action="" method="post" class="form w-50 fl">
+      <h1 class="page-title">{{ self.title() }}</h1>
 
-    <div class="form__field">
-      <label>Reason for Entry:</label>
-      <textarea name="entry_reason" value="{{ request.form.entry_reason }}" rows="4" autofocus></textarea>
+      <div class="form__field">
+        <label>Symbol / Ticker:</label>
+        <input type="text" name="symbol" value="{{ request.form.symbol }}" placeholder="e.g. MSFT" autofocus />
+      </div>
+      <div class="form__field">
+        <label>Entry Target:</label>
+        <input type="number" name="target_entry" value="{{ request.form.target_entry }}" placeholder="e.g. 31.90" />
+      </div>
+      <div class="form__field">
+        <label>Profit Target:</label>
+        <input type="number" name="target_profit" value="{{ request.form.target_profit }}" placeholder="e.g. 33.18" />
+      </div>
+      <div class="form__field">
+        <label>Stop loss:</label>
+        <input type="number" name="target_stop" value="{{ request.form.target_stop }}" placeholder="e.g. 31.26" />
+      </div>
+      <div class="form__field">
+        <label>Reason for Entry:</label>
+        <textarea name="entry_reason" value="{{ request.form.entry_reason }}" rows="4"></textarea>
+      </div>
+      <div class="form__field">
+        <button type="submit" class="btn">Create</button>
+      </div>
+    </form>
+    <div class="w-50 fr" id="appRoot">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="tr">Stop</th>
+            <th class="tc">%</th>
+            <th class="tl">Profit</th>
+            <th class="tr">P/L $</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="form__field">
-      <button type="submit" class="btn">Create</button>
-    </div>
-  </form>
+  </div>
+
+  <script src="{{ url_for('static', filename='mithril.js') }}"></script>
+  <script>
+    var root = document.getElementById('appRoot');
+
+    var PERCENTS = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
+
+    var state = {
+      entry: 50,
+      shares: null,
+      value: 10000,
+    };
+
+    var Calculator = {
+      handleUpdate: function(updateType, value) {
+        if (updateType === 'shares') {
+          state.shares = value;
+          state.value = null;
+        } else {
+          state.shares = null;
+          state.value = parseInt(value);
+          if (Number.isNaN(state.value)) {
+            state.value = 10000;
+          }
+        }
+      },
+
+      renderRow: function(percent) {
+        var stopPrice = state.entry * (1 - (percent / 100));
+        var profitPrice = state.entry * (1 + (percent / 100));
+        var shares = state.shares ? state.shares : Math.round(state.value / state.entry);
+        var profitAmount =  (shares * profitPrice) - (shares * state.entry);
+        return m('tr', [
+          m('td.tr', '$ ' + stopPrice.toFixed(2)),
+          m('td.tc', percent.toFixed(1) + ' %'),
+          m('td.tl', '$ ' + profitPrice.toFixed(2)),
+          m('td.tr', '$ ' + profitAmount.toFixed(2)),
+        ]);
+      },
+
+      view: function() {
+        return m('div', [
+          m('h3', 'Target Calculator'),
+          m('div', [
+            m('strong', 'Entry price: '),
+            m('span', '$ ' + state.entry.toFixed(2)),
+          ]),
+          m('div.cf', [
+            m('label.fl.w-50', 'Shares'),
+            m('label.fr.w-50', 'Value'),
+          ]),
+          m('div.cf', [
+            m('input.fl.w-50', {
+              name: 'number',
+              value: state.shares ? state.shares : Math.round(state.value / state.entry),
+              oninput: m.withAttr('value', this.handleUpdate.bind(this, 'shares')),
+            }),
+            m('input.fr.w-50', {
+              name: 'number',
+              value: state.shares ? state.shares * state.entry : state.value,
+              oninput: m.withAttr('value', this.handleUpdate.bind(this, 'value')),
+            }),
+          ]),
+          m('table.table', [
+            m('thead', [
+              m('tr', [
+                m('th.tr', 'Stop'),
+                m('th.tc', '%'),
+                m('th.tl', 'Profit'),
+                m('th.tr', 'P/L $'),
+              ]),
+            ]),
+            m('tbody', PERCENTS.map(this.renderRow)),
+          ]),
+        ]);
+      },
+    };
+
+    m.render(root, Calculator);
+  </script>
 {% endblock %}

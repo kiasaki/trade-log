@@ -1,4 +1,7 @@
 import os
+import pytz
+import decimal
+from datetime import datetime
 from hashlib import md5
 from functools import wraps
 from datetime import datetime
@@ -8,7 +11,7 @@ from flask import Flask, request, session, url_for, redirect, \
 from werkzeug import check_password_hash, generate_password_hash
 
 from sqlalchemy import create_engine, select, MetaData, Table, Column, \
-    Integer, Text, ForeignKey
+    BigInteger, Integer, Text, DateTime, ForeignKey
 
 
 # Config
@@ -23,6 +26,8 @@ DATABASE = os.getenv('DATABASE_URL', LOCAL_DATABASE_URL)
 DEBUG = True if os.getenv('DEBUG', '0') == '1' else False
 SERVER_NAME = 'localhost:' + os.getenv('PORT', '5000')
 SECRET_KEY = os.getenv('SECRET_KEY', 'keyboard cat')
+
+NEW_YORK_TZ = pytz.timezone('America/New_York')
 
 app = Flask('trade_log')
 app.config.from_object(__name__)
@@ -57,6 +62,11 @@ trades = Table(
     'trade', metadata,
     Column('trade_id', Integer, primary_key=True),
     Column('account_id', Integer, ForeignKey('account.account_id'), nullable=False),
+    Column('date', DateTime, nullable=False),
+    Column('symbol', Text, nullable=False),
+    Column('target_entry', BigInteger, nullable=False),
+    Column('target_profit', BigInteger, nullable=False),
+    Column('target_stop', BigInteger, nullable=False),
     Column('entry_reason', Text, nullable=False),
     Column('exit_reason', Text, nullable=False),
     Column('analysis', Text, nullable=False),
@@ -99,6 +109,15 @@ def objectify(row):
     for (key, value) in row.items():
         obj[key] = value
     return namedtuple('GenericDict', obj.keys())(**obj)
+
+
+def parse_decimal_to_bigint(text):
+    """Parses a decimal string to a bigint where the last five numbers
+    cents, lower than 1"""
+    try:
+        return int(decimal.Decimal(text) * 100000)
+    except decimal.InvalidOperation:
+        return None
 
 
 def format_datetime(timestamp):
@@ -259,13 +278,30 @@ def account(account_id):
 @load_account
 def trades_create(account_id):
     if request.method == 'POST':
+        target_entry = parse_decimal_to_bigint(request.form['target_entry'])
+        target_profit = parse_decimal_to_bigint(request.form['target_profit'])
+        target_stop = parse_decimal_to_bigint(request.form['target_stop'])
+
         if len(request.form['entry_reason']) == 0:
             flash('You have to enter a reson for your entry', category='danger')
+        elif len(request.form['symbol']) == 0:
+            flash('You have to enter the symbol you are trading', category='danger')
+        elif target_entry is None:
+            flash('Target entry price entered is not a number', category='danger')
+        elif target_profit is None:
+            flash('Target profit price entered is not a number', category='danger')
+        elif target_stop is None:
+            flash('Target stop price entered is not a number', category='danger')
         else:
             ins = tradest.insert()
             result = db_exec(
                 ins,
                 account_id=g.account.account_id,
+                date=NEW_YORK_TZ.localize(datetime.now()),
+                symbol=request.form['symbol'],
+                target_entry=target_entry,
+                target_profit=target_profit,
+                target_stop=target_stop,
                 entry_reason=request.form['entry_reason'],
                 exit_reason='',
                 analysis='',

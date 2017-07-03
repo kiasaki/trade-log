@@ -5,8 +5,69 @@
 {% block body %}
   <h1 class="page-title">
     {{ self.title() }} &mdash; Trade
-    <a href="{{ url_for('account', account_id=g.account.account_id) }}" class="btn fr">
+    <a href="{{ url_for('account', account_id=g.account.account_id) }}" class="btn btn--secondary fr">
       &larr; Back
     </a>
   </h1>
+
+  <div class="well">
+    <h2 class="mt0">
+      Overview
+      <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}" class="btn fr">
+        Edit
+      </a>
+    </h2>
+    <div class="cf">
+      <div class="fl w-50">
+        <strong>Reason for Entry:</strong>
+        <p>{{ g.trade.entry_reason }}</p>
+      </div>
+      <div class="fl w-50">
+        <strong>Reason for Exit:</strong>
+        <p>{{ g.trade.exit_reason }}</p>
+      </div>
+    </div>
+    <div class="cf">
+      <div class="fl w-50">
+        <strong>Analysis:</strong>
+        <p>{{ g.trade.analysis }}</p>
+      </div>
+    </div>
+  </div>  
+
+  <h2>
+    Orders
+    <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}" class="btn fr">
+      + Add Order
+    </a>
+  </h2>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th class="tl">Date</th>
+        <th class="tr">Qty</th>
+        <th class="tr">Price</th>
+        <th class="tr">Commission</th>
+        <th class="tr">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>2017-07-03 9:31</td>
+        <td class="tr">50</td>
+        <td class="tr">32.18</td>
+        <td class="tr">0.50</td>
+        <td class="tr">
+          <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}">
+            Edit
+          </a>
+          &nbsp;
+          <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}">
+            Delete
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 {% endblock %}
