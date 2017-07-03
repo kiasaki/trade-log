@@ -11,7 +11,7 @@ from flask import Flask, request, session, url_for, redirect, \
 from werkzeug import check_password_hash, generate_password_hash
 
 from sqlalchemy import create_engine, select, MetaData, Table, Column, \
-    BigInteger, Integer, Text, DateTime, ForeignKey
+    BigInteger, Integer, Text, DateTime, Boolean, ForeignKey
 
 
 # Config
@@ -28,6 +28,8 @@ SERVER_NAME = 'localhost:' + os.getenv('PORT', '5000')
 SECRET_KEY = os.getenv('SECRET_KEY', 'keyboard cat')
 
 NEW_YORK_TZ = pytz.timezone('America/New_York')
+
+ORDER_TYPES = ('buy', 'sell', 'sell_short', 'buy_to_cover',)
 
 app = Flask('trade_log')
 app.config.from_object(__name__)
@@ -54,6 +56,7 @@ accounts = Table(
     Column('account_id', Integer, primary_key=True),
     Column('user_id', Integer, ForeignKey('user.user_id'), nullable=False),
     Column('name', Text, nullable=False),
+    Column('cash', BigInteger, nullable=False),
 )
 accountst = accounts
 accountsc = accounts.c
@@ -62,7 +65,7 @@ trades = Table(
     'trade', metadata,
     Column('trade_id', Integer, primary_key=True),
     Column('account_id', Integer, ForeignKey('account.account_id'), nullable=False),
-    Column('date', DateTime, nullable=False),
+    # Provided
     Column('symbol', Text, nullable=False),
     Column('target_entry', BigInteger, nullable=False),
     Column('target_profit', BigInteger, nullable=False),
@@ -70,9 +73,34 @@ trades = Table(
     Column('entry_reason', Text, nullable=False),
     Column('exit_reason', Text, nullable=False),
     Column('analysis', Text, nullable=False),
+    # Computed
+    Column('first_order_date', DateTime, nullable=False),
+    Column('last_order_date', DateTime, nullable=False),
+    Column('commissions', BigInteger, nullable=False),
+    Column('is_short', Boolean, nullable=False),
+    Column('avg_buy_price', BigInteger, nullable=False),
+    Column('avg_sell_price', BigInteger, nullable=False),
+    Column('profit', BigInteger, nullable=False),
+    Column('quantity', Integer, nullable=False),
+    Column('quantity_outstanding', Integer, nullable=False),
+    Column('orders_count', Integer, nullable=False),
 )
 tradest = trades
 tradesc = trades.c
+
+orders = Table(
+    'order', metadata,
+    Column('order_id', Integer, primary_key=True),
+    Column('trade_id', Integer, ForeignKey('trade.trade_id'), nullable=False),
+    Column('account_id', Integer, ForeignKey('account.account_id'), nullable=False),
+    Column('date', DateTime, nullable=False),
+    Column('type', Text, nullable=False),
+    Column('quantity', BigInteger, nullable=False),
+    Column('price', BigInteger, nullable=False),
+    Column('commission', BigInteger, nullable=False),
+)
+orderst = orders
+ordersc = orders.c
 
 
 # Commands
@@ -120,13 +148,28 @@ def parse_decimal_to_bigint(text):
         return None
 
 
+def parse_int(text):
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def parse_datetime(text):
+    try:
+        return NEW_YORK_TZ.localize(datetime.strptime(text, '%Y-%m-%d %H:%M'))
+    except ValueError:
+        return None
+
+
 def format_number(bignum):
+    """Format a $ bigint for display."""
     return "{:.2f}".format(bignum / 100000)
 
 
-def format_datetime(timestamp):
-    """Format a timestamp for display."""
-    return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
+def format_datetime(date):
+    """Format a datetime for display."""
+    return date.strftime('%Y-%m-%d %H:%M')
 
 
 def gravatar_url(email, size=80):
@@ -260,11 +303,14 @@ def accounts_switch():
 @sign_in_required
 def accounts_create():
     if request.method == 'POST':
+        cash = parse_decimal_to_bigint(request.form['cash'])
         if len(request.form['name']) == 0:
             flash('You have to enter a name', category='danger')
+        elif cash is None:
+            flash('Account cash entered is not a number', category='danger')
         else:
             ins = accountst.insert()
-            result = db_exec(ins, user_id=g.user.user_id, name=request.form['name'])
+            result = db_exec(ins, user_id=g.user.user_id, name=request.form['name'], cash=cash)
             flash('Account created')
             return redirect(url_for('account', account_id=result.inserted_primary_key[0]))
     return render_template('accounts_create.html')
@@ -302,7 +348,6 @@ def trades_create(account_id):
             result = db_exec(
                 ins,
                 account_id=g.account.account_id,
-                date=NEW_YORK_TZ.localize(datetime.now()),
                 symbol=request.form['symbol'],
                 target_entry=target_entry,
                 target_profit=target_profit,
@@ -310,6 +355,17 @@ def trades_create(account_id):
                 entry_reason=request.form['entry_reason'],
                 exit_reason='',
                 analysis='',
+
+                first_order_date=NEW_YORK_TZ.localize(datetime.now()),
+                last_order_date=NEW_YORK_TZ.localize(datetime.now()),
+                commissions=0,
+                is_short=False,
+                avg_buy_price=0,
+                avg_sell_price=0,
+                profit=0,
+                quantity=0,
+                quantity_outstanding=0,
+                orders_count=0,
             )
             flash('Trade created')
             return redirect(url_for(
@@ -325,7 +381,65 @@ def trades_create(account_id):
 @load_account
 def trade(account_id, trade_id):
     g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    g.orders = sorted(db_find_where(orderst, ordersc.trade_id == trade_id), key=lambda o: o.date)
+    print(g.orders)
     return render_template('trade.html')
+
+@app.route('/accounts/<int:account_id>/trades/<int:trade_id>/create', methods=['GET', 'POST'])
+@sign_in_required
+@load_account
+def orders_create(account_id, trade_id):
+    g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    if request.method == 'POST':
+        date = parse_datetime(request.form['date'])
+        quantity = parse_int(request.form['quantity'])
+        price = parse_decimal_to_bigint(request.form['price'])
+        commission = parse_decimal_to_bigint(request.form['commission'])
+
+        if date is None:
+            flash('A valid date is required', category='danger')
+        elif request.form['type'] not in ORDER_TYPES:
+            flash('No hax plz', category='danger')
+        elif quantity is None:
+            flash('Quantity entered is not a number', category='danger')
+        elif price is None:
+            flash('Price entered is not a number', category='danger')
+        elif commission is None:
+            flash('Commission entered is not a number', category='danger')
+        else:
+            ins = orderst.insert()
+            result = db_exec(
+                ins,
+                trade_id=trade_id,
+                account_id=account_id,
+                date=date,
+                type=request.form['type'],
+                quantity=quantity,
+                price=price,
+                commission=commission,
+            )
+            flash('Trade created')
+            return redirect(url_for(
+                'trade',
+                account_id=account_id,
+                trade_id=trade_id,
+            ))
+    return render_template('orders_form.html')
+
+@app.route('/accounts/<int:account_id>/orders/<int:order_id>/edit', methods=['GET', 'POST'])
+@sign_in_required
+@load_account
+def orders_edit(account_id, trade_id):
+    g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    return render_template('orders_form.html')
+
+@app.route('/accounts/<int:account_id>/orders/<int:order_id>/delete')
+@sign_in_required
+@load_account
+def orders_delete(account_id, trade_id, order_id):
+    db_exec(orderst.delete().where(ordersc.order_id == order_id and ordersc.account_id == account_id))
+    flash('Order deleted.', category='success')
+    return redirect(url_for('trade', account_id=account_id, trade_id=trade_id))
 
 
 @app.route('/signin', methods=['GET', 'POST'])

@@ -7,8 +7,12 @@
     <h1 class="page-title">{{ self.title() }}</h1>
 
     <div class="form__field">
-      <label>Name <i>(e.g. E-Trade Long Term Margin)</i>:</label>
-      <input type="text" name="name" value="{{ request.form.name }}" autofocus>
+      <label>Name <i>(e.g. E-Trade Long Term Margin)</i></label>
+      <input type="text" name="name" value="{{ request.form.name }}" autofocus />
+    </div>
+    <div class="form__field">
+      <label>Account Value / Cash</label>
+      <input type="number" name="cash" value="{{ request.form.cash }}" min="0" step="0.01" />
     </div>
     <div class="form__field">
       <button type="submit" class="btn">Create</button>

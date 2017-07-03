@@ -50,6 +50,7 @@ img {
   max-width: 100%;
 }
 
+select,
 textarea,
 input[type='text'],
 input[type='number'],
@@ -63,6 +64,7 @@ input[type='email'] {
   width: 100%;
   max-width: 16rem;
 }
+select:focus,
 textarea:focus,
 input[type='text']:focus,
 input[type='number']:focus,
@@ -208,6 +210,7 @@ select {
 .page-header aside select {
   display: inline-block;
   background: #FFFFFF;
+  font-size: 0.9rem;
   padding: 8px 12px;
   border: 0;
   border-radius: 3px;
