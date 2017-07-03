@@ -120,6 +120,10 @@ def parse_decimal_to_bigint(text):
         return None
 
 
+def format_number(bignum):
+    return "{:.2f}".format(bignum / 100000)
+
+
 def format_datetime(timestamp):
     """Format a timestamp for display."""
     return datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M')
@@ -131,7 +135,8 @@ def gravatar_url(email, size=80):
         (md5(email.strip().lower().encode('utf-8')).hexdigest(), size)
 
 
-app.jinja_env.filters['datetimeformat'] = format_datetime
+app.jinja_env.filters['format_number'] = format_number
+app.jinja_env.filters['format_datetime'] = format_datetime
 app.jinja_env.filters['gravatar'] = gravatar_url
 
 

@@ -13,15 +13,15 @@
       </div>
       <div class="form__field">
         <label>Entry Target:</label>
-        <input type="number" name="target_entry" value="{{ request.form.target_entry }}" placeholder="e.g. 31.90" />
+        <input type="number" name="target_entry" value="{{ request.form.target_entry }}" step="0.01" min="0" placeholder="e.g. 31.90" id="targetEntry" />
       </div>
       <div class="form__field">
         <label>Profit Target:</label>
-        <input type="number" name="target_profit" value="{{ request.form.target_profit }}" placeholder="e.g. 33.18" />
+        <input type="number" name="target_profit" value="{{ request.form.target_profit }}" step="0.01" min="0" placeholder="e.g. 33.18" />
       </div>
       <div class="form__field">
         <label>Stop loss:</label>
-        <input type="number" name="target_stop" value="{{ request.form.target_stop }}" placeholder="e.g. 31.26" />
+        <input type="number" name="target_stop" value="{{ request.form.target_stop }}" step="0.01" min="0" placeholder="e.g. 31.26" />
       </div>
       <div class="form__field">
         <label>Reason for Entry:</label>
@@ -31,22 +31,7 @@
         <button type="submit" class="btn">Create</button>
       </div>
     </form>
-    <div class="w-50 fr" id="appRoot">
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="tr">Stop</th>
-            <th class="tc">%</th>
-            <th class="tl">Profit</th>
-            <th class="tr">P/L $</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="w-50 fr" id="appRoot"></div>
   </div>
 
   <script src="{{ url_for('static', filename='mithril.js') }}"></script>
@@ -61,10 +46,23 @@
       value: 10000,
     };
 
+    var targetEntryEl = document.getElementById('targetEntry');
+    targetEntryEl.addEventListener('blur', function(event) {
+      state.entry = parseFloat(event.target.value);
+      if (Number.isNaN(state.entry)) {
+        state.entry = 50;
+      }
+      m.redraw();
+    });
+
     var Calculator = {
       handleUpdate: function(updateType, value) {
+        console.log(updateType, value);
         if (updateType === 'shares') {
-          state.shares = value;
+          state.shares = parseInt(value);
+          if (Number.isNaN(state.value)) {
+            state.value = 100;
+          }
           state.value = null;
         } else {
           state.shares = null;
@@ -80,35 +78,34 @@
         var profitPrice = state.entry * (1 + (percent / 100));
         var shares = state.shares ? state.shares : Math.round(state.value / state.entry);
         var profitAmount =  (shares * profitPrice) - (shares * state.entry);
+
         return m('tr', [
-          m('td.tr', '$ ' + stopPrice.toFixed(2)),
-          m('td.tc', percent.toFixed(1) + ' %'),
-          m('td.tl', '$ ' + profitPrice.toFixed(2)),
+          m('td.tr', stopPrice.toFixed(2)),
+          m('td.tc', percent.toFixed(1) + '%'),
+          m('td.tl', profitPrice.toFixed(2)),
           m('td.tr', '$ ' + profitAmount.toFixed(2)),
         ]);
       },
 
       view: function() {
         return m('div', [
-          m('h3', 'Target Calculator'),
-          m('div', [
-            m('strong', 'Entry price: '),
-            m('span', '$ ' + state.entry.toFixed(2)),
-          ]),
+          m('h3', 'Target Calculator ($ ' + state.entry.toFixed(2) + ')'),
           m('div.cf', [
             m('label.fl.w-50', 'Shares'),
             m('label.fr.w-50', 'Value'),
           ]),
           m('div.cf', [
             m('input.fl.w-50', {
-              name: 'number',
+              type: 'number',
+              style: 'border-radius: 3px 0 0 3px;',
               value: state.shares ? state.shares : Math.round(state.value / state.entry),
-              oninput: m.withAttr('value', this.handleUpdate.bind(this, 'shares')),
+              onblur: m.withAttr('value', this.handleUpdate.bind(this, 'shares')),
             }),
             m('input.fr.w-50', {
-              name: 'number',
+              type: 'number',
+              style: 'border-radius: 0 3px 3px 0; border-left: 0;',
               value: state.shares ? state.shares * state.entry : state.value,
-              oninput: m.withAttr('value', this.handleUpdate.bind(this, 'value')),
+              onblur: m.withAttr('value', this.handleUpdate.bind(this, 'value')),
             }),
           ]),
           m('table.table', [
@@ -126,6 +123,6 @@
       },
     };
 
-    m.render(root, Calculator);
+    m.mount(root, Calculator);
   </script>
 {% endblock %}

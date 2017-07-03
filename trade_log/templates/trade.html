@@ -17,22 +17,38 @@
         Edit
       </a>
     </h2>
-    <div class="cf">
-      <div class="fl w-50">
-        <strong>Reason for Entry:</strong>
-        <p>{{ g.trade.entry_reason }}</p>
-      </div>
-      <div class="fl w-50">
-        <strong>Reason for Exit:</strong>
-        <p>{{ g.trade.exit_reason }}</p>
-      </div>
-    </div>
-    <div class="cf">
-      <div class="fl w-50">
-        <strong>Analysis:</strong>
-        <p>{{ g.trade.analysis }}</p>
-      </div>
-    </div>
+    <table class="table">
+      <tbody>
+        <tr>
+          <th class="tl w-25">Symbol</th>
+          <td>{{ g.trade.symbol }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Target Entry Price</th>
+          <td>{{ g.trade.target_entry | format_number }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Target Profit Price</th>
+          <td>{{ g.trade.target_profit | format_number }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Stop loss price</th>
+          <td>{{ g.trade.target_stop | format_number }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Reason for entry</th>
+          <td>{{ g.trade.entry_reason or 'N/A' }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Reason for exit</th>
+          <td>{{ g.trade.exit_reason or 'N/A' }}</td>
+        </tr>
+        <tr>
+          <th class="tl">Analysis</th>
+          <td>{{ g.trade.analysis or 'N/A' }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>  
 
   <h2>

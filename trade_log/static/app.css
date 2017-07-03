@@ -32,15 +32,15 @@ html, body {
 .tc { text-align: center; }
 .tr { text-align: right; }
 
-.w-25 { width: 25%; }
-.w-33 { width: 33.3333333%; }
-.w-50 { width: 50%; }
-.w-66 { width: 66.6666666%; }
-.w-75 { width: 75%; }
-.w-100 { width: 100%; }
-.w-100 { width: 100%; }
+.w-25 { width: 25% !important; }
+.w-33 { width: 33.3333333% !important; }
+.w-50 { width: 50% !important; }
+.w-66 { width: 66.6666666% !important; }
+.w-75 { width: 75% !important; }
+.w-100 { width: 100% !important; }
+.w-100 { width: 100% !important; }
 
-.mt0 { margin-top: 0; }
+.mt0 { margin-top: 0 !important; }
 
 a, a:visited {
   color: #79589F;
@@ -152,7 +152,8 @@ select {
   margin-bottom: 1rem;
   border-collapse: collapse;
 }
-.table tr:last-child td {
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
   border-bottom: 0;
 }
 .table th, .table td {
