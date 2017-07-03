@@ -130,13 +130,18 @@ def resetdb_command():
 # Utils
 # ######################################
 
+class Entity:
+    def __init__(self, **kwargs):
+        self.__dict__ = kwargs
+
+
 def objectify(row):
     if row is None:
         return None
     obj = {}
     for (key, value) in row.items():
         obj[key] = value
-    return namedtuple('GenericDict', obj.keys())(**obj)
+    return Entity(**obj)
 
 
 def parse_decimal_to_bigint(text):
@@ -164,11 +169,15 @@ def parse_datetime(text):
 
 def format_number(bignum):
     """Format a $ bigint for display."""
-    return "{:.2f}".format(bignum / 100000)
+    if bignum is None:
+        return None
+    return "{:,.2f}".format(bignum / 100000).replace(',', ' ')
 
 
 def format_datetime(date):
     """Format a datetime for display."""
+    if date == 'now':
+        return NEW_YORK_TZ.localize(datetime.now()).strftime('%Y-%m-%d %H:%M')
     return date.strftime('%Y-%m-%d %H:%M')
 
 
@@ -376,6 +385,62 @@ def trades_create(account_id):
     return render_template('trades_create.html')
 
 
+def update_trade_computed_fields(trade):
+    orders = sorted(db_find_where(orderst, ordersc.trade_id == trade.trade_id), key=lambda o: o.date)
+    trade.first_order_date = NEW_YORK_TZ.localize(datetime.now())
+    trade.last_order_date = NEW_YORK_TZ.localize(datetime.now())
+    trade.orders_count = len(orders)
+
+    buy_prices = []
+    sell_prices = []
+    trade.profit = 0
+    trade.commissions = 0
+    trade.quantity = 0
+    trade.quantity_outstanding = 0
+
+    for i, o in enumerate(orders):
+        trade.quantity += o.quantity
+        trade.commissions += o.commission
+        if o.type == 'buy' or o.type == 'buy_to_cover':
+            buy_prices.append(o.price)
+            trade.quantity_outstanding += o.quantity
+        else:
+            sell_prices.append(o.price)
+            trade.quantity_outstanding -= o.quantity
+
+        if o.type == 'buy' or o.type == 'sell':
+            trade.is_short = False
+        else:
+            trade.is_short = True
+
+        if o.type == 'sell' or o.type == 'sell_short':
+            trade.profit += o.quantity * o.price
+        else:
+            trade.profit -= o.quantity * o.price
+
+        if i == 0:
+            trade.first_order_date = o.date
+        if i == len(orders)-1:
+            trade.last_order_date = o.date
+    
+    trade.avg_buy_price = sum(buy_prices) / len(buy_prices)
+    trade.avg_sell_price = sum(sell_prices) / len(sell_prices)
+
+    stmt = tradest.update().where(tradesc.trade_id == trade.trade_id).values(
+        first_order_date=trade.first_order_date,
+        last_order_date=trade.last_order_date,
+        commissions=trade.commissions,
+        is_short=trade.is_short,
+        avg_buy_price=trade.avg_buy_price,
+        avg_sell_price=trade.avg_sell_price,
+        profit=trade.profit,
+        quantity=trade.quantity,
+        quantity_outstanding=trade.quantity_outstanding,
+        orders_count=len(orders),
+    )
+    db_exec(stmt)
+
+
 @app.route('/accounts/<int:account_id>/trades/<int:trade_id>', methods=['GET', 'POST'])
 @sign_in_required
 @load_account
@@ -385,11 +450,16 @@ def trade(account_id, trade_id):
     print(g.orders)
     return render_template('trade.html')
 
+
 @app.route('/accounts/<int:account_id>/trades/<int:trade_id>/create', methods=['GET', 'POST'])
 @sign_in_required
 @load_account
 def orders_create(account_id, trade_id):
     g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    g.order = Entity(
+        order_id=None, account_id=account_id, trade_id=trade_id,
+        price=None, commission=None,
+    )
     if request.method == 'POST':
         date = parse_datetime(request.form['date'])
         quantity = parse_int(request.form['quantity'])
@@ -418,7 +488,8 @@ def orders_create(account_id, trade_id):
                 price=price,
                 commission=commission,
             )
-            flash('Trade created')
+            update_trade_computed_fields(g.trade)
+            flash('Order created')
             return redirect(url_for(
                 'trade',
                 account_id=account_id,
@@ -426,20 +497,59 @@ def orders_create(account_id, trade_id):
             ))
     return render_template('orders_form.html')
 
+
 @app.route('/accounts/<int:account_id>/orders/<int:order_id>/edit', methods=['GET', 'POST'])
 @sign_in_required
 @load_account
-def orders_edit(account_id, trade_id):
-    g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+def orders_edit(account_id, order_id):
+    g.order = db_get_where(orderst, ordersc.order_id == order_id and orsersc.account_id == account_id)
+    g.trade = db_get_where(tradest, tradesc.trade_id == g.order.trade_id)
+    if request.method == 'POST':
+        date = parse_datetime(request.form['date'])
+        quantity = parse_int(request.form['quantity'])
+        price = parse_decimal_to_bigint(request.form['price'])
+        commission = parse_decimal_to_bigint(request.form['commission'])
+
+        if date is None:
+            flash('A valid date is required', category='danger')
+        elif request.form['type'] not in ORDER_TYPES:
+            flash('No hax plz', category='danger')
+        elif quantity is None:
+            flash('Quantity entered is not a number', category='danger')
+        elif price is None:
+            flash('Price entered is not a number', category='danger')
+        elif commission is None:
+            flash('Commission entered is not a number', category='danger')
+        else:
+            stmt = orderst.update().where(orderc.order_id == g.order.order_id).values(
+                date=date,
+                type=request.form['type'],
+                quantity=quantity,
+                price=price,
+                commission=commission,
+            )
+            db_exec(stmt)
+            update_trade_computed_fields(g.trade)
+            flash('Order updated')
+            return redirect(url_for(
+                'trade',
+                account_id=account_id,
+                trade_id=g.trade.trade_id,
+            ))
     return render_template('orders_form.html')
+
 
 @app.route('/accounts/<int:account_id>/orders/<int:order_id>/delete')
 @sign_in_required
 @load_account
-def orders_delete(account_id, trade_id, order_id):
-    db_exec(orderst.delete().where(ordersc.order_id == order_id and ordersc.account_id == account_id))
+def orders_delete(account_id, order_id):
+    where = ordersc.order_id == order_id and ordersc.account_id == account_id
+    order = db_get_where(orderst, where)
+    trade = db_get_where(tradest, tradesc.trade_id == order.trade_id)
+    db_exec(orderst.delete().where(where))
+    update_trade_computed_fields(trade)
     flash('Order deleted.', category='success')
-    return redirect(url_for('trade', account_id=account_id, trade_id=trade_id))
+    return redirect(url_for('trade', account_id=account_id, trade_id=order.trade_id))
 
 
 @app.route('/signin', methods=['GET', 'POST'])

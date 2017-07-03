@@ -80,6 +80,13 @@ select {
   cursor: pointer;
 }
 
+.c-red {
+  color: #A94442;
+}
+.c-green {
+  color: #3C763D;
+}
+
 .form {
   max-width: 32rem;
 }

@@ -9,33 +9,39 @@
 {% endblock %}
 
 {% block body %}
-  <form action="" method="post" class="form">
-    <h1 class="page-title">{{ self.title() }}</h1>
+  <h1 class="page-title">
+    {{ self.title() }}
+    <a href="{{ url_for('trade', account_id=g.order.account_id, trade_id=g.order.trade_id) }}" class="btn btn--secondary fr">
+        &larr; Back
+    </a>
+  </h1>
 
+  <form action="" method="post" class="form">
     <div class="form__field">
       <label>Date</label>
-      <input type="text" name="date" value="{{ request.form.date }}" placeholder="e.g. 2020-06-18 9:35" autofocus />
+      <input type="text" name="date" value="{{ request.form.date or g.order.date or ('now' | format_datetime) }}" placeholder="e.g. 2020-06-18 9:35" autofocus />
     </div>
     <div class="form__field">
       <label>Type</label>
       <select name="type">
-        <option value="buy" {% if request.form.type == "buy" %}selected{% endif %}>Buy</option>
-        <option value="sell" {% if request.form.type == "sell" %}selected{% endif %}>Sell</option>
-        <option value="sell_short" {% if request.form.type == "sell_short" %}selected{% endif %}>Sell Short</option>
-        <option value="buy_to_cover" {% if request.form.type == "buy_to_cover" %}selected{% endif %}>Buy to cover</option>
+        {% set type = request.form.type or g.order.type %}
+        <option value="buy" {% if type == "buy" %}selected{% endif %}>Buy</option>
+        <option value="sell" {% if type == "sell" %}selected{% endif %}>Sell</option>
+        <option value="sell_short" {% if type == "sell_short" %}selected{% endif %}>Sell Short</option>
+        <option value="buy_to_cover" {% if type == "buy_to_cover" %}selected{% endif %}>Buy to cover</option>
       </select>
     </div>
     <div class="form__field">
       <label>Quantity</label>
-      <input type="number" name="quantity" value="{{ request.form.quantity }}" placeholder="e.g. 500" min="0" step="1" />
+      <input type="number" name="quantity" value="{{ request.form.quantity or g.order.quantity }}" placeholder="e.g. 500" min="0" step="1" />
     </div>
     <div class="form__field">
       <label>Avg. Price</label>
-      <input type="number" name="price" value="{{ request.form.price }}" placeholder="e.g. 45.23" min="0" step="0.01" />
+      <input type="number" name="price" value="{{ request.form.price or (g.order.price | format_number) }}" placeholder="e.g. 45.23" min="0" step="0.01" />
     </div>
     <div class="form__field">
       <label>Commission</label>
-      <input type="number" name="commission" value="{{ request.form.commission }}" placeholder="e.g. 4.95" min="0" step="0.01" />
+      <input type="number" name="commission" value="{{ request.form.commission or (g.order.commission | format_number) }}" placeholder="e.g. 4.95" min="0" step="0.01" />
     </div>
 
     <div class="form__field">
