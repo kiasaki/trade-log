@@ -1,34 +1,66 @@
 {% extends "layout.html" %}
 
-{% block title %}Create a Trade{% endblock %}
+{% block title %}
+  {% if g.trade.trade_id %}
+    Edit a Trade
+  {% else %}
+    Create a Trade
+  {% endif %}
+{% endblock %}
 
 {% block body %}
   <div class="cf">
-    <form action="" method="post" class="form w-50 fl">
-      <h1 class="page-title">{{ self.title() }}</h1>
+    <h1 class="page-title">
+      {{ self.title() }}
+      <a href="{{ url_for('account', account_id=g.account.account_id) }}" class="btn btn--secondary fr">
+        &larr; Back
+      </a>
+    </h1>
 
+    <form action="" method="post" class="form w-50 fl">
       <div class="form__field">
         <label>Symbol / Ticker:</label>
-        <input type="text" name="symbol" value="{{ request.form.symbol }}" placeholder="e.g. MSFT" autofocus />
+        <input type="text" name="symbol" value="{{ request.form.symbol or g.trade.symbol }}" placeholder="e.g. MSFT" autofocus />
       </div>
       <div class="form__field">
         <label>Entry Target:</label>
-        <input type="number" name="target_entry" value="{{ request.form.target_entry }}" step="0.01" min="0" placeholder="e.g. 31.90" id="targetEntry" />
+        <input type="number" name="target_entry" value="{{ request.form.target_entry or (g.trade.target_entry | format_number) }}" step="0.01" min="0" placeholder="e.g. 31.90" id="targetEntry" />
       </div>
       <div class="form__field">
         <label>Profit Target:</label>
-        <input type="number" name="target_profit" value="{{ request.form.target_profit }}" step="0.01" min="0" placeholder="e.g. 33.18" />
+        <input type="number" name="target_profit" value="{{ request.form.target_profit or (g.trade.target_profit | format_number) }}" step="0.01" min="0" placeholder="e.g. 33.18" />
       </div>
       <div class="form__field">
         <label>Stop loss:</label>
-        <input type="number" name="target_stop" value="{{ request.form.target_stop }}" step="0.01" min="0" placeholder="e.g. 31.26" />
+        <input type="number" name="target_stop" value="{{ request.form.target_stop or (g.trade.target_stop | format_number) }}" step="0.01" min="0" placeholder="e.g. 31.26" />
       </div>
       <div class="form__field">
         <label>Reason for Entry:</label>
-        <textarea name="entry_reason" value="{{ request.form.entry_reason }}" rows="4"></textarea>
+        <textarea name="entry_reason" rows="4"
+        >{{ request.form.entry_reason or g.trade.entry_reason }}</textarea>
       </div>
+
+      {% if g.trade.trade_id %}
+        <div class="form__field">
+          <label>Reason for Exit:</label>
+          <textarea name="exit_reason" rows="4"
+          >{{ request.form.exit_reason or g.trade.exit_reason }}</textarea>
+        </div>
+        <div class="form__field">
+          <label>Analysis:</label>
+          <textarea name="analysis" rows="4"
+          >{{ request.form.analysis or g.trade.analysis }}</textarea>
+        </div>
+      {% endif %}
+
       <div class="form__field">
-        <button type="submit" class="btn">Create</button>
+        <button type="submit" class="btn">
+          {% if g.trade.trade_id %}
+            Save
+          {% else %}
+            Create
+          {% endif %}
+        </button>
       </div>
     </form>
     <div class="w-50 fr" id="appRoot"></div>
@@ -41,7 +73,7 @@
     var PERCENTS = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
 
     var state = {
-      entry: 50,
+      entry: parseFloat('{{ (g.trade.target_entry | format_number) or "50" }}'),
       shares: null,
       value: 10000,
     };
@@ -89,7 +121,7 @@
 
       view: function() {
         return m('div', [
-          m('h3', 'Target Calculator ($ ' + state.entry.toFixed(2) + ')'),
+          m('h3.mt0', 'Target Calculator ($' + state.entry.toFixed(2) + ')'),
           m('div.cf', [
             m('label.fl.w-50', 'Shares'),
             m('label.fr.w-50', 'Value'),

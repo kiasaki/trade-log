@@ -7,7 +7,7 @@ from functools import wraps
 from datetime import datetime
 from collections import namedtuple
 from flask import Flask, request, session, url_for, redirect, \
-    render_template, abort, g, flash, _app_ctx_stack
+    render_template, abort, g, flash, _app_ctx_stack, abort
 from werkzeug import check_password_hash, generate_password_hash
 
 from sqlalchemy import create_engine, select, MetaData, Table, Column, \
@@ -329,7 +329,11 @@ def accounts_create():
 @sign_in_required
 @load_account
 def account(account_id):
-    g.trades = db_find_where(tradest, tradesc.account_id == account_id)
+    g.trades = sorted(
+        db_find_where(tradest, tradesc.account_id == account_id),
+        key=lambda o: o.last_order_date,
+        reverse=True,
+    )
     return render_template('account.html')
 
 
@@ -337,6 +341,10 @@ def account(account_id):
 @sign_in_required
 @load_account
 def trades_create(account_id):
+    g.trade = Entity(
+        trade_id=None, account_id=account_id,
+        target_entry=None, target_profit=None, target_stop=None
+    )
     if request.method == 'POST':
         target_entry = parse_decimal_to_bigint(request.form['target_entry'])
         target_profit = parse_decimal_to_bigint(request.form['target_profit'])
@@ -382,7 +390,49 @@ def trades_create(account_id):
                 account_id=account_id,
                 trade_id=result.inserted_primary_key[0],
             ))
-    return render_template('trades_create.html')
+    return render_template('trades_form.html')
+
+
+@app.route('/accounts/<int:account_id>/trades/<int:trade_id>/edit', methods=['GET', 'POST'])
+@sign_in_required
+@load_account
+def trades_edit(account_id, trade_id):
+    g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    if not g.trade:
+        return abort(404)
+    if request.method == 'POST':
+        target_entry = parse_decimal_to_bigint(request.form['target_entry'])
+        target_profit = parse_decimal_to_bigint(request.form['target_profit'])
+        target_stop = parse_decimal_to_bigint(request.form['target_stop'])
+
+        if len(request.form['entry_reason']) == 0:
+            flash('You have to enter a reson for your entry', category='danger')
+        elif len(request.form['symbol']) == 0:
+            flash('You have to enter the symbol you are trading', category='danger')
+        elif target_entry is None:
+            flash('Target entry price entered is not a number', category='danger')
+        elif target_profit is None:
+            flash('Target profit price entered is not a number', category='danger')
+        elif target_stop is None:
+            flash('Target stop price entered is not a number', category='danger')
+        else:
+            stmt = tradest.update().where(tradesc.trade_id == trade_id).values(
+                symbol=request.form['symbol'],
+                target_entry=target_entry,
+                target_profit=target_profit,
+                target_stop=target_stop,
+                entry_reason=request.form['entry_reason'],
+                exit_reason=request.form['exit_reason'],
+                analysis=request.form['analysis'],
+            )
+            db_exec(stmt)
+            flash('Trade updated')
+            return redirect(url_for(
+                'trade',
+                account_id=account_id,
+                trade_id=g.trade.trade_id,
+            ))
+    return render_template('trades_form.html')
 
 
 def update_trade_computed_fields(trade):
@@ -399,8 +449,9 @@ def update_trade_computed_fields(trade):
     trade.quantity_outstanding = 0
 
     for i, o in enumerate(orders):
-        trade.quantity += o.quantity
         trade.commissions += o.commission
+        if o.type == 'buy' or o.type == 'sell_short':
+            trade.quantity += o.quantity
         if o.type == 'buy' or o.type == 'buy_to_cover':
             buy_prices.append(o.price)
             trade.quantity_outstanding += o.quantity
@@ -422,9 +473,21 @@ def update_trade_computed_fields(trade):
             trade.first_order_date = o.date
         if i == len(orders)-1:
             trade.last_order_date = o.date
-    
-    trade.avg_buy_price = sum(buy_prices) / len(buy_prices)
-    trade.avg_sell_price = sum(sell_prices) / len(sell_prices)
+
+    outstanding_value = 0
+    outstanding_value_quantity = trade.quantity_outstanding
+    for o in orders:
+        if outstanding_value_quantity > 0 and o.type == 'sell_short':
+            outstanding_value += min(o.quantity, outstanding_value_quantity) * o.price
+            outstanding_value_quantity -= min(o.quantity, outstanding_value_quantity)
+        if outstanding_value_quantity > 0 and o.type == 'buy':
+            outstanding_value += min(o.quantity, outstanding_value_quantity) * o.price
+            outstanding_value_quantity += min(o.quantity, outstanding_value_quantity)
+
+    trade.profit += outstanding_value
+
+    trade.avg_buy_price = sum(buy_prices) / max(len(buy_prices), 1)
+    trade.avg_sell_price = sum(sell_prices) / max(len(sell_prices), 1)
 
     stmt = tradest.update().where(tradesc.trade_id == trade.trade_id).values(
         first_order_date=trade.first_order_date,
@@ -456,6 +519,8 @@ def trade(account_id, trade_id):
 @load_account
 def orders_create(account_id, trade_id):
     g.trade = db_get_where(tradest, tradesc.trade_id == trade_id and tradesc.account_id == account_id)
+    if not g.trade:
+        return abort(404)
     g.order = Entity(
         order_id=None, account_id=account_id, trade_id=trade_id,
         price=None, commission=None,
@@ -503,6 +568,8 @@ def orders_create(account_id, trade_id):
 @load_account
 def orders_edit(account_id, order_id):
     g.order = db_get_where(orderst, ordersc.order_id == order_id and orsersc.account_id == account_id)
+    if not g.trade:
+        return abort(404)
     g.trade = db_get_where(tradest, tradesc.trade_id == g.order.trade_id)
     if request.method == 'POST':
         date = parse_datetime(request.form['date'])

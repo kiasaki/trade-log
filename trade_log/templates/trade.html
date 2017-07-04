@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% set trade_value = ((g.trade.avg_buy_price or g.trade.avg_sell_price) * g.trade.quantity) %}
+
 {% block title %}{{ g.account.name }}{% endblock %}
 
 {% block body %}
@@ -13,7 +15,7 @@
   <div class="well">
     <h2 class="mt0">
       Overview
-      <a href="{{ url_for('trades_create', account_id=g.account.account_id) }}" class="btn fr">
+      <a href="{{ url_for('trades_edit', account_id=g.trade.account_id, trade_id=g.trade.trade_id) }}" class="btn fr">
         Edit
       </a>
     </h2>
@@ -44,6 +46,10 @@
               $ {{ g.trade.avg_sell_price | format_number }}
             </td>
           </tr>
+          <tr>
+            <th class="tl">Pos. Size (Approx.)</th>
+            <td>$ {{ trade_value | format_number }}</td>
+          </tr>
         </tbody>
       </table>
       <table class="table w-50 fr">
@@ -68,9 +74,15 @@
             <td>$ {{ g.trade.commissions | format_number }}</td>
           </tr>
           <tr>
-            <th class="tl">Profit / Loss</th>
+            <th class="tl">Profit / Loss $</th>
             <td class="{% if g.trade.profit >= 0 %}c-green{% else %}c-red{% endif %}">
               $ {{ g.trade.profit | format_number }}
+            </td>
+          </tr>
+          <tr>
+            <th class="tl">Profit / Loss %</th>
+            <td class="{% if g.trade.profit >= 0 %}c-green{% else %}c-red{% endif %}">
+              {{ ((g.trade.profit / trade_value) * 100 * 100000) | format_number }} %
             </td>
           </tr>
         </tbody>
@@ -134,7 +146,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="tc">No orders yet.</td></tr>
+        <tr><td colspan="7" class="tc">No orders yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
