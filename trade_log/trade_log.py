@@ -24,7 +24,6 @@ LOCAL_DATABASE_URL = 'sqlite:///trade_log.db'
 
 DATABASE = os.getenv('DATABASE_URL', LOCAL_DATABASE_URL)
 DEBUG = True if os.getenv('DEBUG', '0') == '1' else False
-SERVER_NAME = 'localhost:' + os.getenv('PORT', '5000')
 SECRET_KEY = os.getenv('SECRET_KEY', 'keyboard cat')
 
 NEW_YORK_TZ = pytz.timezone('America/New_York')
