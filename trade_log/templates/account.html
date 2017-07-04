@@ -38,7 +38,7 @@
     </thead>
     <tbody style="font-size: 0.85rem">
       {% for t in g.trades %}
-        {% set trade_value = ((t.avg_buy_price or t.avg_sell_price) * t.quantity) %}
+        {% set trade_value = ((t.avg_buy_price or t.avg_sell_price) * t.quantity) or 1 %}
         <tr>
           <td>
             <a href="{{ url_for('trade', account_id=t.account_id, trade_id=t.trade_id) }}">

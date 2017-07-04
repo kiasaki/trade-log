@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% set trade_value = ((g.trade.avg_buy_price or g.trade.avg_sell_price) * g.trade.quantity) %}
+{% set trade_value = ((g.trade.avg_buy_price or g.trade.avg_sell_price) * g.trade.quantity) or 1 %}
 
 {% block title %}{{ g.account.name }}{% endblock %}
 
