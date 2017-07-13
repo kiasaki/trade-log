@@ -74,15 +74,17 @@
             <td>$ {{ g.trade.commissions | format_number }}</td>
           </tr>
           <tr>
-            <th class="tl">Profit / Loss $</th>
+            <th class="tl">Profit / Loss</th>
             <td class="{% if g.trade.profit >= 0 %}c-green{% else %}c-red{% endif %}">
-              $ {{ g.trade.profit | format_number }}
+              $ {{ g.trade.profit | format_number }} &middot;
+              {{ ((g.trade.profit / trade_value) * 100 * 100000) | format_number }} %
             </td>
           </tr>
           <tr>
-            <th class="tl">Profit / Loss %</th>
-            <td class="{% if g.trade.profit >= 0 %}c-green{% else %}c-red{% endif %}">
-              {{ ((g.trade.profit / trade_value) * 100 * 100000) | format_number }} %
+            <th class="tl">P / L w/ Commissions</th>
+            <td class="{% if (g.trade.profit - g.trade.commissions) >= 0 %}c-green{% else %}c-red{% endif %}">
+              $ {{ (g.trade.profit - g.trade.commissions) | format_number }} &middot;
+              {{ (((g.trade.profit - g.trade.commissions) / trade_value) * 100 * 100000) | format_number }} %
             </td>
           </tr>
         </tbody>

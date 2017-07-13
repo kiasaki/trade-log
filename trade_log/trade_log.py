@@ -1,7 +1,7 @@
 import os
 import pytz
 import decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import md5
 from functools import wraps
 from datetime import datetime
@@ -176,7 +176,7 @@ def format_number(bignum):
 def format_datetime(date):
     """Format a datetime for display."""
     if date == 'now':
-        return NEW_YORK_TZ.localize(datetime.now()).strftime('%Y-%m-%d %H:%M')
+        return datetime.now(NEW_YORK_TZ).strftime('%Y-%m-%d %H:%M')
     return date.strftime('%Y-%m-%d %H:%M')
 
 
@@ -324,6 +324,39 @@ def accounts_create():
     return render_template('accounts_create.html')
 
 
+def account_stats_for_period(trades, start, end):
+    trades_count = 0
+    profit = 0
+    commissions = 0
+    wins = []
+    losses = []
+
+    trades_for_period = [t for t in trades if t.last_order_date >= start and t.last_order_date <= end]
+    for t in trades_for_period:
+        trades_count += 1
+        profit += t.profit
+        commissions += t.commissions
+        if (t.profit - t.commissions) >= 0:
+            wins.append(t.profit - t.commissions)
+        else:
+            losses.append(t.profit - t.commissions)
+
+
+    return {
+        'trade_count': trades_count,
+        'profit': profit,
+        'commissions': commissions,
+        'profit_without_commissions': profit - commissions,
+        'win_count': len(wins),
+        'loss_count': len(losses),
+        'avg_win': sum(wins) / max(1, len(wins)),
+        'avg_loss': sum(losses) / max(1, len(losses)),
+        'largest_win': max(wins or [0]),
+        'largest_loss': max(losses or [0]),
+        'accuracy': len(wins) / max(1, trades_count),
+    }
+
+
 @app.route('/accounts/<int:account_id>')
 @sign_in_required
 @load_account
@@ -333,6 +366,19 @@ def account(account_id):
         key=lambda o: o.last_order_date,
         reverse=True,
     )
+    now = datetime.now(NEW_YORK_TZ).replace(tzinfo=None)
+
+    day_start = now.replace(hour=0, minute=0)
+    g.stats_day = account_stats_for_period(g.trades, start=day_start, end=now)
+
+    month_start = now.replace(day=1, hour=0, minute=0)
+    g.stats_mtd = account_stats_for_period(g.trades, start=month_start, end=now)
+    g.stats_month = account_stats_for_period(g.trades, start=now - timedelta(days=30), end=now)
+
+    year_start = now.replace(month=1, day=1, hour=0, minute=0)
+    g.stats_ytd = account_stats_for_period(g.trades, start=year_start, end=now)
+    g.stats_year = account_stats_for_period(g.trades, start=now - timedelta(days=365), end=now)
+
     return render_template('account.html')
 
 
@@ -372,8 +418,8 @@ def trades_create(account_id):
                 exit_reason='',
                 analysis='',
 
-                first_order_date=NEW_YORK_TZ.localize(datetime.now()),
-                last_order_date=NEW_YORK_TZ.localize(datetime.now()),
+                first_order_date=datetime.now(NEW_YORK_TZ),
+                last_order_date=datetime.now(NEW_YORK_TZ),
                 commissions=0,
                 is_short=False,
                 avg_buy_price=0,
@@ -436,8 +482,8 @@ def trades_edit(account_id, trade_id):
 
 def update_trade_computed_fields(trade):
     orders = sorted(db_find_where(orderst, ordersc.trade_id == trade.trade_id), key=lambda o: o.date)
-    trade.first_order_date = NEW_YORK_TZ.localize(datetime.now())
-    trade.last_order_date = NEW_YORK_TZ.localize(datetime.now())
+    trade.first_order_date = datetime.now(NEW_YORK_TZ)
+    trade.last_order_date = datetime.now(NEW_YORK_TZ)
     trade.orders_count = len(orders)
 
     buy_prices = []
@@ -567,7 +613,7 @@ def orders_create(account_id, trade_id):
 @load_account
 def orders_edit(account_id, order_id):
     g.order = db_get_where(orderst, ordersc.order_id == order_id and orsersc.account_id == account_id)
-    if not g.trade:
+    if not g.order:
         return abort(404)
     g.trade = db_get_where(tradest, tradesc.trade_id == g.order.trade_id)
     if request.method == 'POST':
@@ -587,7 +633,7 @@ def orders_edit(account_id, order_id):
         elif commission is None:
             flash('Commission entered is not a number', category='danger')
         else:
-            stmt = orderst.update().where(orderc.order_id == g.order.order_id).values(
+            stmt = orderst.update().where(ordersc.order_id == g.order.order_id).values(
                 date=date,
                 type=request.form['type'],
                 quantity=quantity,

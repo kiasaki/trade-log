@@ -12,14 +12,70 @@
 
   <h2>Overview</h2>
 
-  <div>
-    TODO<br>
-    account value, risk %,<br>
-    gain/loss past week, gain/loss % past week<br>
-    gain/loss past month, gain/loss % past month<br>
-    gain/loss YTD, gain/loss % YTD<br>
-    gain/loss past year, gain/loss % past year<br>
+  <div class="mb3">
+    <button class="btn btn--small btn--secondary js-overview-btn" data-n="1">Day</button>
+    <button class="btn btn--small js-overview-btn" data-n="2">Current Month</button>
+    <button class="btn btn--small js-overview-btn" data-n="3">Past Month</button>
+    <button class="btn btn--small js-overview-btn" data-n="4">Current Year</button>
+    <button class="btn btn--small js-overview-btn" data-n="5">Past Year</button>
   </div>
+
+  {% for stats in [
+    g.stats_day,
+    g.stats_mtd,
+    g.stats_month,
+    g.stats_ytd,
+    g.stats_year,
+  ] %}
+  <div class="well mb3 js-overview" style="display: {{(loop.index == 1) and 'block' or 'none'}};">
+    <div class="cf">
+      <table class="table w-50 fl">
+        <tbody>
+          <tr>
+            <th class="tl"># Trades (Tot. / Win / Loss)</th>
+            <td>
+              {{stats.trade_count}} /
+              <span class="c-green">{{stats.win_count}}</span> /
+              <span class="c-red">{{stats.loss_count}}</span>
+            </td>
+          </tr>
+          <tr>
+            <th class="tl">Accuracy (% of wins)</th>
+            <td>{{(stats.accuracy * 100 * 100000) | format_number}} %</td>
+          </tr>
+          <tr>
+            <th class="tl">Average (Win / Loss)</th>
+            <td>
+              <span class="c-green">$ {{stats.avg_win | format_number}}</span> /
+              <span class="c-red">$ {{stats.avg_loss | format_number}}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="table w-50 fl">
+        <tbody>
+          <tr>
+            <th class="tl">Profit after commissions</th>
+            <td class="{% if stats.profit_without_commissions >= 0 %}c-green{% else %}c-red{% endif %}">
+              $ {{stats.profit_without_commissions | format_number}}
+            </td>
+          </tr>
+          <tr>
+            <th class="tl">Total (Profit / Commissions)</th>
+            <td>$ {{stats.profit | format_number}} / $ {{stats.commissions | format_number}}</td>
+          </tr>
+          <tr>
+            <th class="tl">Largest (Win / Loss)</th>
+            <td>
+              <span class="c-green">$ {{stats.largest_win | format_number}}</span> /
+              <span class="c-red">$ {{stats.largest_loss | format_number}}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
 
   <h2>Trades</h2>
 
@@ -71,4 +127,23 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <script>
+    var overviews = document.querySelectorAll('.js-overview');
+    var buttons = document.querySelectorAll('.js-overview-btn');
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function(e) {
+        var n = parseInt(e.target.getAttribute('data-n'))-1;
+
+        // Un-select all buttons and select clicked one
+        buttons.forEach(function (b) { b.classList.remove('btn--secondary'); });
+        e.target.classList.add('btn--secondary');
+
+        // Hide all overlays and show current one
+        overviews.forEach(function (b) { b.style.display = 'none'; });
+        overviews[n].style.display = 'block';
+      });
+    });
+  </script>
 {% endblock %}

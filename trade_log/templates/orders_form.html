@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    {% if g.order %}
+    {% if g.order.order_id %}
         Edit Order #{{ g.order.order_id }}
     {% else %}
         Add an Order
@@ -19,7 +19,7 @@
   <form action="" method="post" class="form">
     <div class="form__field">
       <label>Date</label>
-      <input type="text" name="date" value="{{ request.form.date or g.order.date or ('now' | format_datetime) }}" placeholder="e.g. 2020-06-18 9:35" autofocus />
+      <input type="text" name="date" value="{{ (request.form.date or g.order.date or 'now') | format_datetime }}" placeholder="e.g. 2020-06-18 9:35" autofocus />
     </div>
     <div class="form__field">
       <label>Type</label>

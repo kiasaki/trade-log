@@ -41,6 +41,10 @@ html, body {
 .w-100 { width: 100% !important; }
 
 .mt0 { margin-top: 0 !important; }
+.mb0 { margin-bottom: 0 !important; }
+.mb1 { margin-bottom: 0.25rem !important; }
+.mb2 { margin-bottom: 0.5rem !important; }
+.mb3 { margin-bottom: 1rem !important; }
 
 a, a:visited {
   color: #79589F;
@@ -114,6 +118,10 @@ select {
 .btn--large, a.btn--large {
   font-size: 1.2rem;
   padding: 0.75rem 1rem;
+}
+.btn--small, a.btn--small {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
 }
 .btn--secondary, a.btn--secondary {
   background: #FFFFFF;
