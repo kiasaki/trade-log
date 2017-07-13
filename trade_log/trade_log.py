@@ -161,7 +161,7 @@ def parse_int(text):
 
 def parse_datetime(text):
     try:
-        return NEW_YORK_TZ.localize(datetime.strptime(text, '%Y-%m-%d %H:%M'))
+        return datetime.strptime(text, '%Y-%m-%d %H:%M')
     except ValueError:
         return None
 
@@ -352,7 +352,7 @@ def account_stats_for_period(trades, start, end):
         'avg_win': sum(wins) / max(1, len(wins)),
         'avg_loss': sum(losses) / max(1, len(losses)),
         'largest_win': max(wins or [0]),
-        'largest_loss': max(losses or [0]),
+        'largest_loss': min(losses or [0]),
         'accuracy': len(wins) / max(1, trades_count),
     }
 
