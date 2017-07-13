@@ -118,8 +118,8 @@
             ${{ trade_value | format_number }}
           </td>
           <td class="tr {% if t.profit >= 0 %}c-green{% else %}c-red{% endif %}">
-            ${{ t.profit | format_number }}<br />
-            {{ ((t.profit / trade_value) * 100 * 100000) | format_number }}%
+            ${{ (t.profit - t.commissions) | format_number }}<br />
+            {{ (((t.profit - t.commissions) / trade_value) * 100 * 100000) | format_number }}%
           </td>
         </tr>
       {% else %}
